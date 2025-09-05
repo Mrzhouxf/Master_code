@@ -1,5 +1,6 @@
 import os
 import csv
+import math
 
 # 读取神经网络和神经网络映射策略，后续通信优化需要
 def read_net_mapping_strategy(network_name, param1, param2):
@@ -69,5 +70,34 @@ def read_net_mapping_strategy(network_name, param1, param2):
     except Exception as e:
         print(f"读取文件时发生错误:{str(e)}")
         return None
+
+#record data transmission path
+def calculate_transferpath(map_strategy,net,quantization_bit):
+    all_transfer_path = []
+    # path_record = []
+    for i in range(len(map_strategy)-1):
+        all_transmission = int(net[i][0])*int(net[i][1])*int(net[i][2])*quantization_bit
+
+        all_transfer_path.append([all_transmission,map_strategy[i][2],map_strategy[i+1][2]])
+
+    return all_transfer_path
+
+
+# Start splitting noc and nop
+# Separate noc data and nop data based on network topology and chip size
+# all_transfer_path represent data transfer path
+# topology is net shape
+# k is number of chips in a single dimension
+# n is dimensionality degree
+def split_transfer_data(all_transfer_path,topology,k,n):
+    total_num_arrays = all_transfer_path[0][1] + all_transfer_path[0][2]
+    for i in range(1,len(all_transfer_path)):
+        total_num_arrays = total_num_arrays + all_transfer_path[i][2]
+    if topology == 'mesh':
+        num_tile = k**n
+        num_chiplet = math.ceil(total_num_arrays/num_tile)
+
+
+
 
 
