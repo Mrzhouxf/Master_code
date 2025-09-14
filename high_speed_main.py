@@ -65,6 +65,8 @@ if resource_min <= resource_limit:
         print("Function execution completed.")
     select_design_scheme(output_file,mode,ratio,resource_limit)
     return_to_home_directory()
+    
+
 
 else:
     print("Insufficient resources, unable to fully map, please re-enter")
