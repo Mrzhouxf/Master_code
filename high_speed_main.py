@@ -1,6 +1,7 @@
 from function import *
 from nop import *
 from noc import *
+from parallel_optimized_search import *
 import argparse
 import time
 start_time = time.perf_counter()
@@ -10,7 +11,7 @@ parser.add_argument('--ar', default = 512, type = int, help = 'N of rows of the 
 parser.add_argument('--ac', default = 512, type = int, help = 'N of columns of the PIM array')
 parser.add_argument(
     '--network',
-    default='Resnet110',
+    default='vgg16',
     type=str,
     help='Dataset = ['
          'NetWork_Resnet20.csv, '
@@ -33,9 +34,9 @@ resource_limit = args.resource
 mode = args.mode
 ratio = args.ratio
 cycle_limit =   90000      # Total compute cycles上限
-transmission_limit = 45000000  # Total data transmission上限
+transmission_limit = 40000000  # Total data transmission上限
 output_file = "global_"+net+"_mapping_design.csv"
-max_rows = 1000    # 最大记录数
+max_rows = 1000000    # 最大记录数
 timeout_seconds = 600 #设置超时时间为 30 分钟（1800 秒）
 
 
@@ -43,9 +44,10 @@ net_name = 'NetWork_'+net+'.csv'
 net_structure,net_conv_minarray,net_fc_minarray = calculate_min_array(net_name,array_row,array_col)
 resource_min = net_conv_minarray + net_fc_minarray
 reproduce_exp(net_name,array_row,array_col)
-move_csv_by_name(str(array_row)+"_"+str(array_col),net)
-check_and_enter_directory(net)
-
+# move_csv_by_name(str(array_row)+"_"+str(array_col),net)
+# check_and_enter_directory(net)
+move_csv_by_name(str(array_row)+"_"+str(array_col),net+"_not_repeat")
+check_and_enter_directory(net+"_not_repeat")
 
 if resource_min <= resource_limit:
     dynamic_array = resource_limit - resource_min
@@ -56,7 +58,7 @@ if resource_min <= resource_limit:
                                 net_structure[i][2],net_structure[i][5],array_row,array_col,layer_max_resource)
         all_design.append(design)
     all_design = remove_duplicate_schemes(all_design)
-    thread = TaskThread(target=process_neural_network_design, args=(all_design, resource_limit, resource_min, cycle_limit, transmission_limit, output_file, max_rows))
+    thread = TaskThread(target=process_neural_network_design_optimized_parallel, args=(all_design, resource_limit, resource_min, cycle_limit, transmission_limit, output_file, max_rows))
     thread.start()
     thread.join(timeout=timeout_seconds)
     if thread.is_alive():
