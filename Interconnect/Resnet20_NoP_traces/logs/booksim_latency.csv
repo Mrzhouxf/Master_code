@@ -1,0 +1,6 @@
+Trace,Latency(cycles)
+Chiplet_NoP_layer_0,743
+Chiplet_NoP_layer_1,561
+Chiplet_NoP_layer_2,242
+Chiplet_NoP_layer_3,186
+Total NoC latency is	0.000002	s
