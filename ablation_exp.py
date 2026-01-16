@@ -134,7 +134,7 @@ move_csv_by_name(str(array_row)+"_"+str(array_col),net+"/"+net+"_"+str(array_row
 
 # 方案生成模式 (Scheme Generation Modes)
 generation_modes = {
-    # 'simple_no_prune': repeat_auto_mapping, # 不去重
+    'simple_no_prune': repeat_auto_mapping, # 不去重
     'repeat_pruned': auto_mapping        # 去重
 }
 

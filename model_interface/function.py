@@ -552,11 +552,11 @@ def repeat_auto_mapping(image_row, image_col, kernel, inchannel, outchannel, arr
             pareto1 = filter_by_index_and_value(pareto,2,j)
             # pareto1 = remove_duplicates(pareto1)
             total_pareto = total_pareto + pareto1
-        # total_pareto = remove_duplicates(total_pareto)
-        # if len(total_pareto)==1:
-        #     total_pareto = total_pareto
-        # else:
-        #     total_pareto = total_pareto*2
+        total_pareto = remove_duplicates(total_pareto)
+        if len(total_pareto)==1:
+            total_pareto = total_pareto
+        else:
+            total_pareto = total_pareto*2
         return total_pareto #pareto_performance,pareto_design
 
 
@@ -1540,3 +1540,64 @@ def read_csv_to_2d_array(filepath):
     except Exception as e:
         print(f"读取CSV文件时发生错误: {e}")
     return data
+
+
+
+
+def calculate_specified_columns_sum(file_path, target_columns):
+    """
+    计算CSV文件中指定列的数值总和（列索引从1开始）
+    
+    参数:
+        file_path (str): CSV文件的路径
+        target_columns (list): 需要计算总和的列索引列表（如[1,3,5]表示第1、3、5列）
+    
+    返回:
+        list: 对应列的总和列表，顺序与target_columns一致，长度相同
+    
+    异常:
+        FileNotFoundError: 文件路径不存在时抛出
+        ValueError: 列索引无效/数据非数值/列数不足时抛出
+        TypeError: target_columns不是列表或包含非整数元素时抛出
+    """
+    # 1. 输入参数校验
+    if not isinstance(target_columns, list):
+        raise TypeError("target_columns必须是列表类型，例如[1,2,3]")
+    if not all(isinstance(col, int) for col in target_columns):
+        raise TypeError("target_columns列表中的元素必须是整数（列索引）")
+    if any(col < 1 for col in target_columns):
+        raise ValueError("列索引必须从1开始，不能小于1")
+    
+    # 2. 初始化指定列的总和（按输入列表顺序）
+    sum_dict = {col: 0.0 for col in target_columns}  # 用字典存储列-总和映射，避免顺序问题
+    
+    try:
+        # 3. 读取CSV文件并计算指定列总和
+        with open(file_path, 'r', encoding='utf-8') as csv_file:
+            csv_reader = csv.reader(csv_file)
+            
+            # 遍历每一行数据
+            for row_num, row in enumerate(csv_reader, start=1):
+                current_row_cols = len(row)
+                
+                # 检查当前行是否包含所有目标列
+                max_target_col = max(target_columns) if target_columns else 0
+                if current_row_cols < max_target_col:
+                    raise ValueError(f"第{row_num}行仅包含{current_row_cols}列，不足目标列{max_target_col}，无法计算")
+                
+                # 遍历需要计算的列，累加数值
+                for col in target_columns:
+                    try:
+                        # 列索引转成Python列表的0索引
+                        col_value = float(row[col - 1])
+                        sum_dict[col] += col_value
+                    except ValueError as e:
+                        raise ValueError(f"第{row_num}行第{col}列的数值转换失败: {e}")
+    
+    except FileNotFoundError:
+        raise FileNotFoundError(f"找不到指定的文件: {file_path}")
+    
+    # 4. 按输入列表的顺序组装返回结果（保留2位小数）
+    result = [round(sum_dict[col], 2) for col in target_columns]
+    
+    return result
