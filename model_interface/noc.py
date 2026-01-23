@@ -564,14 +564,14 @@ def generate_traces_noc_GA(bus_width, netname, noc_records, scale):
             os.chdir("..")
 
 
-def generate_traces_noc_ours(bus_width, netname, noc_records, scale):
+def generate_traces_noc_batch(bus_width, netname, noc_records, scale):
     """
     为片上网络(NoC)生成通信 trace 文件
     每个 Chiplet 每层生成一个 txt,记录 (src, dest, timestamp) 三列
     """
     # ---------------- 目录准备 ----------------
-    create_folder('Ours')
-    Interconnect_path = './Ours'                                    # 根目录
+    create_folder('Batch_map')
+    Interconnect_path = './Batch_map'                                    # 根目录
     create_folder(netname + '_NoC_traces', Interconnect_path)               # 创建 ./Interconnect/<netname>_NoC_traces/
     file_path = Interconnect_path + '/' + netname + '_NoC_traces'           # trace 总目录
 

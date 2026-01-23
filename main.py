@@ -75,19 +75,20 @@ net_structure,net_conv_minarray,net_fc_minarray = calculate_min_array(net_name,a
 resource_min = net_conv_minarray + net_fc_minarray
 print("Minimum resources for complete mapping:",resource_min)
 mapping_data = read_csv_to_2d_array(net+"/"+net+"_"+str(array_row)+"_"+str(array_col)+"/NetWork_"+net+"_"+str(array_row)+"_"+str(array_col)+"_im2.csv")
-print("mapping_data:",mapping_data)
-print(net_structure)
+# print("mapping_data:",mapping_data)
+# print(net_structure)
 
 if resource_min <= resource_limit:
     # 原始搜索实验
     reproduce_exp(net_name,array_row,array_col)
+    move_csv_by_name(str(array_row)+"_"+str(array_col),net+"/"+net+"_"+str(array_row)+"_"+str(array_col))
+    
     # 2026.1.10
     list_trans_cycle = calculate_specified_columns_sum(net+"/"+net+"_"+str(array_row)+"_"+str(array_col)+"/NetWork_"+net+"_"+str(array_row)+"_"+str(array_col)+"_cof.csv",[1,2])
     cycle_limit = list_trans_cycle[1]*1.1
     transmission_limit = list_trans_cycle[0]*1.01
     # 2026.1.10
-    move_csv_by_name(str(array_row)+"_"+str(array_col),net+"_not_repeat")
-    check_and_enter_directory(net+"_not_repeat")
+    check_and_enter_directory(net)
     
     dynamic_array = resource_limit - resource_min
     all_design = []
@@ -207,7 +208,10 @@ else:
     orignal_vwsdk_plan,original_vwsdk_data = map_nn_layers_by_sequence(vwsdk_layers_data,resource_limit)
     optimal_vwsdk_data,optimal_vwsdk_plan = find_optimal_network_mapping(vwsdk_layers_data,resource_limit)
 
-    print(optimal_vwsdk_plan)
+    print("optimal_vwsdk_plan:",optimal_vwsdk_plan)
+    print("optimal_sdk_plan:",optimal_sdk_plan)
+    print("optimal_im2_plan:",optimal_im2_plan)
+
     print("==========================Im2col data transmission================================")
     print("Original Im2Col Off-chip delay issue:",original_im2_data)
     print("Optimal Im2Col Off-chip delay issue:",optimal_im2_data)
@@ -233,21 +237,61 @@ else:
         f.write(f"Optimal VWSDK Off-chip delay issue: {optimal_vwsdk_data}\n")
 
     
-    vwsdk_batch = Batch_mapping(optimal_vwsdk_plan,net_structure,vwsdk, resource_limit, array_row, array_col,8)
-    print("VWSDK-batch:",vwsdk_batch.intra_layer_optimize())
-    print("VWSDK-batch:",vwsdk_batch.off_chip_latency())
+    # vwsdk_batch = Batch_mapping(optimal_vwsdk_plan,net_structure,vwsdk, resource_limit, array_row, array_col,8)
+    # print("VWSDK-batch:",vwsdk_batch.intra_layer_optimize())
+    # print("VWSDK-batch:",vwsdk_batch.off_chip_latency())
 
-    sdk_batch = Batch_mapping(optimal_sdk_plan,net_structure,sdk, resource_limit, array_row, array_col,8)
-    print("SDK-batch:",sdk_batch.intra_layer_optimize())
-    print("SDK-batch:",sdk_batch.off_chip_latency())
+    # sdk_batch = Batch_mapping(optimal_sdk_plan,net_structure,sdk, resource_limit, array_row, array_col,8)
+    # print("SDK-batch:",sdk_batch.intra_layer_optimize())
+    # print("SDK-batch:",sdk_batch.off_chip_latency())
 
 
-    im2_batch = Batch_mapping(optimal_im2_plan,net_structure,im2, resource_limit, array_row, array_col,8)
-    print("im2-batch:",im2_batch.intra_layer_optimize())
-    print("im2-batch:",im2_batch.off_chip_latency())
+    # im2_batch = Batch_mapping(optimal_im2_plan,net_structure,im2, resource_limit, array_row, array_col,8)
+    # print("im2-batch:",im2_batch.intra_layer_optimize())
+    # print("im2-batch:",im2_batch.off_chip_latency())
 
     # print(im2_batch.layer_sequence())
+    print("os.pwd():",os.getcwd())
+    os.chdir("..")
+    os.chdir("..")
+    batch_mapper = Batch_mapping(
+        SimConfig_path='/home/zxf1/master_code/SimConfig.ini',
+        NN=net_structure,
+        mapping_data=im2,
+        inprecision=8  # 输入精度8bit
+    )
+    
+    # 执行映射并打印结果
+    result = batch_mapper.run_batch_mapping()
+    all_designs = []
+    segment_bathch = []
+    for i in result['batches']:
+        segment_bathch.append(i['layers'])
+        for j in i['layers']:
+            print(i['layers'])
+            design = auto_mapping(net_structure[j][0], net_structure[j][1], net_structure[j][3], net_structure[j][2], net_structure[j][5], 512,512, 16-len(i['layers']))
+            all_designs.append(design)
 
+    print(result)
+    final_result = batch_mapper.select_best_mapping_scheme(all_designs,segment_bathch,[16,16],[1,0])
+    print("final_result:",final_result)
+    print("映射完成！")
+    updated_dict = batch_mapper.update_mapping_dict(final_result)
+    print("update_map:",updated_dict)
+    # print(result['batches'][0]['layers'])
+    aaa = batch_mapper.evaluate_perfermance(final_result)
+    print("evaluate_perfermance:",aaa)
+
+    new_dict = generate_layer_mappings(net_structure,final_result,16)
+    print("new_dict:",new_dict)
+
+
+    noc, nop = generate_noc_nop_records(new_dict,net_structure,8)
+    print("noc:",noc)
+    print("nop:",nop)
+
+    generate_traces_noc(64,'Resnet201_batch',noc,10)
+    run_booksim_noc("/home/zxf1/master_code/Interconnect/","Resnet201_batch",4)
     # print(optimal_vwsdk_plan)
     return_to_home_directory()
     # print(len(orignal_vwsdk_plan))
